@@ -11,7 +11,7 @@ A python script to parse a bunch of english-language text files and try to **ext
 
 ![Terminal screenshot](screenshot.png?raw=true)
 
-## Prerequesites
+## Prerequisites
 
 * [MongoDB](https://docs.mongodb.com/manual/installation/)
 * [PyMongo](https://api.mongodb.com/python/current/tutorial.html)

@@ -1,6 +1,6 @@
 # textfiles-to-mongodb
 
-A python script to parse a bunch of english-language textfiles and try to extract phrases. The results are stored in a MongoDB collection, one entry for every sentence. A document in the collection will look like this:
+A python script to parse a bunch of english-language text files and try to **extract sentences**. The results are stored in a MongoDB collection, one entry for every sentence. A document in the collection will look like this:
 
     {  
       u'_id':ObjectId('5777f6947eecd42dd933589e'),
@@ -18,7 +18,7 @@ A python script to parse a bunch of english-language textfiles and try to extrac
 
 1. Put some text files into the `textfiles/` directory. (If you don't have any, try [Project Gutenberg](https://www.gutenberg.org/))
 2. Start your MongoDB server
-3. Run `text-files-to-mongodb.py`
+3. Run `textfiles-to-mongodb.py`
 
 ❗️ Note: The script will overwrite the data every time you run it.
 

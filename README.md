@@ -9,6 +9,8 @@ A python script to parse a bunch of english-language text files and try to **ext
       u'sentence':u'"Then I do not see the point."'
     }
 
+![Terminal screenshot](screenshot.png?raw=true)
+
 ## Prerequesites
 
 * [MongoDB](https://docs.mongodb.com/manual/installation/)
@@ -17,7 +19,7 @@ A python script to parse a bunch of english-language text files and try to **ext
 ## Usage
 
 1. Put some text files into the `textfiles/` directory. (If you don't have any, try [Project Gutenberg](https://www.gutenberg.org/))
-2. Start your MongoDB server
+2. Start the MongoDB server
 3. Run `textfiles-to-mongodb.py`
 
 ❗️ Note: The script will overwrite the data every time you run it.

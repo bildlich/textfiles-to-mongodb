@@ -31,33 +31,46 @@ def fileToSentenceList(pathToTextFile):
 
 	# Take 3 strings and determine whether the middle string separates two sentences.
 	# Inspired by http://stackoverflow.com/a/25735848/836005
+	# Leftcontext: All words before the assumed punctuation (one of .!?…)
+	# char: The assumed punctuation
+	# Rightcontext: All words after the assumed punctuation and before the next assumed punctuation
+	
 	def isEndOfSentence(leftContext, char, rightContext):
-		
+
 		result = {
 			'isEndOfSentence': True,
 			'reasons': ["default"]
 		}
 		combined = leftContext + char + rightContext
-	
+
 		# 1. Not end of sentence if 1st char of rightContext isn't one of: white-space, ), ", <empty>
 		match = re.match('[\s)"]', rightContext)
 		if match is None and len(rightContext) > 0:
 			result['isEndOfSentence'] = False
 			result['reasons'].append("1st char of rightContext isnt one of white-space, ), \", <empty>")
-	
+
 		# 2. Not end of sentence if leftContext+char is in abbreviation dictionary
 		# There is a catch here: If sentence ends on abbreviation ("I live in the U.S."),
 		# the algorithm will not recognise the end of the sentence.
 		abbrDict = [
-			"Mr.", "Mrs.", "U.S.", "i.e."
+			"Mr.", "Mrs.", "U.S.", "i.e.", "St."
 		]
 		str = leftContext + char
 		for abbr in abbrDict:
-			if str.endswith(abbr.lower()):
+			if str.lower().endswith(abbr.lower()):
 				result['isEndOfSentence'] = False
 				result['reasons'].append("leftContext appears to end with an abbreviation: "+abbr)
-	
-		# 3. Not end of sentence if first char of rightContext isn't <capital letter> ,',"
+				
+		# 3. Not the end of a sentence if leftContext ends with a roman numeral, eg XIV
+		# Catch: A sentence might actually end on a roman numeral: "I read about Henry IV."
+		# The algorithm will not recognise the end of this sentence.
+		lastWord = leftContext.rsplit(None, 1)[-1]
+		match = re.match('M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$', lastWord)
+		if match is not None and len(leftContext) > 0:
+			result['isEndOfSentence'] = False
+			result['reasons'].append("leftContext appears to end with a roman numeral: "+leftContext)
+
+		# 4. Not end of sentence if first char of rightContext isn't <capital letter> ,',"
 		# Catch: Some english words, like 'I', are capitalized even if they are not at the
 		# beginning of a sentence.
 		match = re.match('[\s)"]*[A-ZÄ-Ü0-9\'"]', rightContext)
@@ -73,10 +86,10 @@ def fileToSentenceList(pathToTextFile):
 	for index, maybeSentence in enumerate(maybeSentences):
 		leftContext = maybeSentence[0]
 		char = maybeSentence[1]
-	
+
 		# Add the leftContext + char to the last item in our list of assumed sentences
 		assumedSentences[-1]['sentence'] += leftContext + char
-		
+
 		if index == (l - 1):
 			rightContext = ""
 		else:
@@ -84,7 +97,7 @@ def fileToSentenceList(pathToTextFile):
 			rightContext = maybeSentences[index+1][0]
 			if isEndOfSentence(leftContext, char, rightContext)['isEndOfSentence']:
 				assumedSentences.append({'sentence': ''})
-			
+
 	# Additional formatting and stuff
 	for index, assumedSentence in enumerate(assumedSentences):
 		# Remove white-space at the beginning and end
@@ -93,16 +106,19 @@ def fileToSentenceList(pathToTextFile):
 		assumedSentence['file'] = pathToTextFile
 		# Overwrite the old sentence with the changes we just made
 		assumedSentences[index] = assumedSentence
-		# TODO: Remove lost quotation marks (trailing at the end of a sentence)
-		# TODO: Consider replacing lazy quotation marks with correct quotation marks
-	
+		# TODO: Avoid lost quotation marks (trailing at the end of a sentence)
+		# If assumedSentence starts with a quotation mark (single, double, …) and does not end with one,
+		# add one at the end.
+		# Likewise, if assumedSentence ends with a quotation mark and does not start with one,
+		# add one at the start.
+
 	return assumedSentences
 
 # Iterate over all the text files in our text files directory
 assumedSentences = ['']
 for filename in os.listdir(textFilesDirectory):
 	print(filename + "…")
-	if os.path.isfile(textFilesDirectory + filename) and filename != ".DS_Store":
+	if os.path.isfile(textFilesDirectory + filename) and filename != ".DS_Store" and filename != ".gitkeep":
 		assumedSentences = fileToSentenceList(textFilesDirectory + filename)
 		print("👍")
 	else:
@@ -137,4 +153,3 @@ randomInteger = random.randint(0, counter)
 print("Here's a random entry:")
 print(sentencesCollection.find().limit(-1).skip(randomInteger).next())
 
-	

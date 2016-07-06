@@ -7,6 +7,29 @@ textFilesDirectory = "textfiles/"
 sentencesDatabase = "sentencesDatabase"
 sentencesCollection = "sentencesCollection"
 
+# This is used later to make sure acronyms are not assumed ends-of-sentences
+abbrDict = [
+	"Mr.", "Mrs.", "U.S.", "i.e.", "St.", "Dr."
+]
+
+# This is used later to make sure there are no lonely quotation marks in a sentence
+quotationMarkDictionary = [{
+	'start': '"',
+	'end': '"',
+	},{
+	'start': '“',
+	'end': '”',
+	},{
+	'start': '\'',
+	'end': '\'',
+	},{
+	'start': '‘',
+	'end': '’'
+	},{
+	'start': '(',
+	'end': ')'
+	}]
+
 def fileToSentenceList(pathToTextFile):
 	# Import string from file
 	file = open(pathToTextFile, 'r')
@@ -52,9 +75,6 @@ def fileToSentenceList(pathToTextFile):
 		# 2. Not end of sentence if leftContext+char is in abbreviation dictionary
 		# There is a catch here: If sentence ends on abbreviation ("I live in the U.S."),
 		# the algorithm will not recognise the end of the sentence.
-		abbrDict = [
-			"Mr.", "Mrs.", "U.S.", "i.e.", "St."
-		]
 		str = leftContext + char
 		for abbr in abbrDict:
 			if str.lower().endswith(abbr.lower()):
@@ -102,13 +122,32 @@ def fileToSentenceList(pathToTextFile):
 	for index, assumedSentence in enumerate(assumedSentences):
 		# Remove white-space at the beginning and end
 		assumedSentence['sentence'] = assumedSentence['sentence'].strip()
+		
+		# If assumedSentence has quotation marks (single, double, …) and the number of opening
+		# quotation marks is larger than the number of closing quotation marks, append a closing
+		# quotation mark at the end of the sentence. Likewise, add opening quotation marks
+		# to the beginning of the sentence if there are more closing marks than opening marks.
+		for quotationMark in quotationMarkDictionary:
+			numberOpenings = assumedSentence['sentence'].count(quotationMark['start'])
+			numberClosings = assumedSentence['sentence'].count(quotationMark['end'])
+			# Are the opening and closing marks the same? ('Wrong' marks.) Then just make sure there is an even number of them
+			if quotationMark['start'] is quotationMark['end'] and numberOpenings % 2 is not 0:
+				# If sentence starts with this quotation mark, put the new one at the end
+				if assumedSentence['sentence'].startswith(quotationMark['start']):
+					assumedSentence['sentence'] += quotationMark['end']
+				else:
+					assumedSentence['sentence'] = quotationMark['end'] + assumedSentence['sentence']
+			elif numberOpenings > numberClosings:
+				assumedSentence['sentence'] += quotationMark['end']
+			elif numberOpenings < numberClosings:
+				 assumedSentence['sentence'] = quotationMark['start'] + assumedSentence['sentence']
+		
 		# Make comprehensible what file the sentence was taken from
 		assumedSentence['file'] = pathToTextFile
 		# Overwrite the old sentence with the changes we just made
 		assumedSentences[index] = assumedSentence
 		# TODO: Avoid lost quotation marks (trailing at the end of a sentence)
-		# If assumedSentence starts with a quotation mark (single, double, …) and does not end with one,
-		# add one at the end.
+		
 		# Likewise, if assumedSentence ends with a quotation mark and does not start with one,
 		# add one at the start.
 

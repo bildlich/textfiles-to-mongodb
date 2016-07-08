@@ -46,7 +46,6 @@ for index, pair in enumerate(quotationMarkDictionary):
 
 def fileToSentenceList(pathToTextFile):
 	# Import string from file
-	# file = open(pathToTextFile, 'r')
 	file = io.open(pathToTextFile, mode='r', buffering=-1, encoding=None, errors=None, newline=None, closefd=True)
 	rawString = file.read().strip()
 
@@ -197,7 +196,7 @@ for filename in os.listdir(textFilesDirectory):
 		print("👍")
 	else:
 		print("❌")
-
+		
 # Connect to the database
 client = MongoClient()
 db = client[sentencesDatabase]
@@ -211,7 +210,9 @@ for index, assumedSentence in enumerate(assumedSentences):
 	noOfWords = assumedSentence['sentence'].count(" ") + 1
 	assumedSentence['noOfWords'] = noOfWords
 	sentencesCollection.insert_one(assumedSentence)
-
+	print assumedSentence['sentence']
+	print "---------------------"
+		
 counter = 0
 noOfWords = 0
 for sentence in sentencesCollection.find():

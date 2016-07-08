@@ -1,28 +1,43 @@
 # textfiles-to-mongodb
 
-A python script to parse a bunch of english-language text files and try to **extract sentences**. The results are stored in a MongoDB collection, one entry for every sentence. A document in the collection will look like this:
+A python script that **split a bunch of english-language text files into sentences** and puts these sentences into a MongoDB collection. A document in the collection will look like this:
 
     {  
       u'_id':ObjectId('5777f6947eecd42dd933589e'),
-      u'noOfWords':7,
+      u'numberOfWords':7,
       u'file':u'textfiles/pg1661.txt',
-      u'sentence':u'"Then I do not see the point."'
+      u'sentence':u'“Then I do not see the point.”'
     }
 
 ![Terminal screenshot](screenshot.png?raw=true)
 
-## The problem it solves
+The hardest part, the sentence tokenization, is done with the [nltk sentence tokenizer](http://www.nltk.org/). I had written a sentence tokenizer from scratch. Then I discovered nltk and threw my work out of the window because nltk is just too good.
 
-Extracting sentences from an english text is not trivial for a short introduction into Sentence Segmentation I recommend this [video](https://www.youtube.com/watch?v=di0N3kXfGYg).
-This script tries to solve the problem with a relatively simple rule-based system, e.g. by identifying acronyms with an (incomplete) acronym dictionary.
+## Text modifications
 
-Additionally, the script modifies the tokenised sentences so that quotation marks, braces, brackets etc. always come in pairs. It also replaces
-typographically incorrect punctuation with the correct alternative. For example, `"Who's there?"` becomes `“Who’s there?”`.
+Before inserting the sentences into the database, the following modifications are made:
+
+* Dumb quotation marks, dashes, and apostrophes are replaced with their typographically correct counterparts.
+
+      Before: "Then I don't see the point."
+      After:  “Then I don’t see the point.”
+
+* Unclosed (or unopened) quotation marks, parentheses, braces, and brackets are closed (resp. opened).
+
+      Before: "Are you sure?
+      After:  “Are you sure?”
+
+* Sentences that don't start with a capital letter and other things that don't look like a sentence are thrown away
+
+      Thrown away:     she said.
+      Not thrown away: She said hello.
 
 ## Prerequisites
 
+* [nltk](http://www.nltk.org)
 * [MongoDB](https://docs.mongodb.com/manual/installation/)
 * [PyMongo](https://api.mongodb.com/python/current/tutorial.html)
+* [smartypants](https://pypi.python.org/pypi/smartypants)
 * [smartypants](https://pypi.python.org/pypi/smartypants)
 
 ## Usage
@@ -31,10 +46,4 @@ typographically incorrect punctuation with the correct alternative. For example,
 2. Start the MongoDB server
 3. Run `textfiles-to-mongodb.py`
 
-❗️ Note: The script will overwrite the data every time you run it.
-
-## Todo
-
-* Test more thoroughly
-* Remove lost quotation marks (trailing at the beginning or end of a sentence)
-* Consider replacing 'lazy' quotation marks with correct quotation marks
+❗️ Note: The script will overwrite the entire collection in the database.

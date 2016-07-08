@@ -132,6 +132,18 @@ def fileToSentenceList(pathToTextFile):
 			if isEndOfSentence(leftContext, char, rightContext)['isEndOfSentence']:
 				assumedSentences.append({'sentence': ''})
 
+	# Go through assumedSentences one more time and throw out things that don't look like a sentence
+	buffer = assumedSentences
+	assumedSentences = []
+	for assumedSentence in buffer:
+		# Throw out one-word or two-word sentences that contain numbers
+		# They are probably headlines: 'Chapter 2.' or '1.F.1.'
+		if assumedSentence['sentence'].count(" ") < 2 and re.search("\d", assumedSentence['sentence']) is not None:
+			print "thrown out:", assumedSentence['sentence']
+			continue
+		else:
+			assumedSentences.append(assumedSentence)
+
 	# Additional formatting and stuff
 	for index, assumedSentence in enumerate(assumedSentences):
 		# Remove white-space at the beginning and end

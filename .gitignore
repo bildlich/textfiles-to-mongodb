@@ -1,6 +1,8 @@
 textfiles/*
 !textfiles/.gitkeep
 
+*.pyc
+
 ### OSX ###
 *.DS_Store
 .AppleDouble

@@ -11,10 +11,19 @@ A python script to parse a bunch of english-language text files and try to **ext
 
 ![Terminal screenshot](screenshot.png?raw=true)
 
+## The problem it solves
+
+Extracting sentences from an english text is not trivial for a short introduction into Sentence Segmentation I recommend this [video](https://www.youtube.com/watch?v=di0N3kXfGYg).
+This script tries to solve the problem with a relatively simple rule-based system, e.g. by identifying acronyms with an (incomplete) acronym dictionary.
+
+Additionally, the script modifies the tokenised sentences so that quotation marks, braces, brackets etc. always come in pairs. It also replaces
+typographically incorrect punctuation with the correct alternative. For example, `"Who's there?"` becomes `“Who’s there?”`.
+
 ## Prerequisites
 
 * [MongoDB](https://docs.mongodb.com/manual/installation/)
 * [PyMongo](https://api.mongodb.com/python/current/tutorial.html)
+* [smartypants](https://pypi.python.org/pypi/smartypants)
 
 ## Usage
 

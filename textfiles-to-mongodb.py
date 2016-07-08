@@ -1,6 +1,10 @@
 # This Python file uses the following encoding: utf-8
 
-import re, os, random
+import re, os, random, io
+import smartypants
+from pymongo import MongoClient
+from HTMLParser import HTMLParser
+h = HTMLParser()
 
 # Settings
 textFilesDirectory = "textfiles/"
@@ -15,38 +19,47 @@ abbrDict = [
 # This is used later to make sure there are no lonely quotation marks in a sentence
 quotationMarkDictionary = [{
 	'start': '"',
-	'end': '"',
+	'end': '"'
 	},{
 	'start': '“',
-	'end': '”',
+	'end': '”'
 	},{
 	'start': '\'',
-	'end': '\'',
+	'end': '\''
 	},{
 	'start': '‘',
 	'end': '’'
 	},{
 	'start': '(',
 	'end': ')'
+	},{
+	'start': '{',
+	'end': '}'
+	},{
+	'start': '[',
+	'end': ']'
 	}]
+	
+# Encode the quotationMarkDictionary with UTF-8 because our text is encoded this way
+for index, pair in enumerate(quotationMarkDictionary):
+	quotationMarkDictionary[index] = {'start': unicode(pair['start'], "utf-8"), 'end': unicode(pair['end'], "utf-8")}
 
 def fileToSentenceList(pathToTextFile):
 	# Import string from file
-	file = open(pathToTextFile, 'r')
+	# file = open(pathToTextFile, 'r')
+	file = io.open(pathToTextFile, mode='r', buffering=-1, encoding=None, errors=None, newline=None, closefd=True)
 	rawString = file.read().strip()
 
 	# Basic cleaning: Replace line breaks with spaces
 	def removeLineBreaks(string):
-		cleanString = re.sub("[\n\r]+", " ", string)
-		cleanString = re.sub("\s{2,}", " ", cleanString)
+		cleanString = re.sub("[\n\r]+", " ", string)	 # Linke breaks to spaces
+		cleanString = re.sub("\s{2,}", " ", cleanString) # Remove double spaces
 		return cleanString
 
 	cleanString = removeLineBreaks(rawString);
 
 	# Split text at common sentence delimiters
-	# delimiters = "[.,!?\"…]"
-	# delimiters = "\s"
-	regex = ur'(?P<leftContext>[^.!?…]+)(?P<char>[.!?…]{1,3}[\'"]?)'
+	regex = ur'(?P<leftContext>[^.!?…]+)(?P<char>[.!?…]{1,3}[\'")]{0,2})'
 	regexCompiled = re.compile(regex, re.MULTILINE)
 	maybeSentences = re.findall(regexCompiled, cleanString)
 	if maybeSentences is None:
@@ -59,7 +72,7 @@ def fileToSentenceList(pathToTextFile):
 	# Rightcontext: All words after the assumed punctuation and before the next assumed punctuation
 	
 	def isEndOfSentence(leftContext, char, rightContext):
-
+	
 		result = {
 			'isEndOfSentence': True,
 			'reasons': ["default"]
@@ -84,11 +97,12 @@ def fileToSentenceList(pathToTextFile):
 		# 3. Not the end of a sentence if leftContext ends with a roman numeral, eg XIV
 		# Catch: A sentence might actually end on a roman numeral: "I read about Henry IV."
 		# The algorithm will not recognise the end of this sentence.
-		lastWord = leftContext.rsplit(None, 1)[-1]
-		match = re.match('M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$', lastWord)
-		if match is not None and len(leftContext) > 0:
-			result['isEndOfSentence'] = False
-			result['reasons'].append("leftContext appears to end with a roman numeral: "+leftContext)
+		if len(leftContext.strip()) > 0:
+			lastWord = leftContext.rsplit(None, 1)[-1]
+			match = re.match('M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$', lastWord)
+			if match is not None:
+				result['isEndOfSentence'] = False
+				result['reasons'].append("leftContext appears to end with a roman numeral: "+leftContext)
 
 		# 4. Not end of sentence if first char of rightContext isn't <capital letter> ,',"
 		# Catch: Some english words, like 'I', are capitalized even if they are not at the
@@ -122,7 +136,10 @@ def fileToSentenceList(pathToTextFile):
 	for index, assumedSentence in enumerate(assumedSentences):
 		# Remove white-space at the beginning and end
 		assumedSentence['sentence'] = assumedSentence['sentence'].strip()
-		
+
+		# Use typographically correct quotation marks, apostrophes and dashes
+		assumedSentence['sentence'] = HTMLParser().unescape(smartypants.smartypants(assumedSentence['sentence']))
+
 		# If assumedSentence has quotation marks (single, double, …) and the number of opening
 		# quotation marks is larger than the number of closing quotation marks, append a closing
 		# quotation mark at the end of the sentence. Likewise, add opening quotation marks
@@ -130,6 +147,12 @@ def fileToSentenceList(pathToTextFile):
 		for quotationMark in quotationMarkDictionary:
 			numberOpenings = assumedSentence['sentence'].count(quotationMark['start'])
 			numberClosings = assumedSentence['sentence'].count(quotationMark['end'])
+			
+			# Special case: single closing quotation marks that are not followed by white-space or the end of the sentence are assumed to be apostrophes
+			if quotationMark['end'] == unicode('’', 'UTF-8'):
+				numberOfApostrophes = len(re.findall(unicode('’', 'UTF-8')+'([^\s$])', assumedSentence['sentence']))
+				numberClosings -= numberOfApostrophes
+			
 			# Are the opening and closing marks the same? ('Wrong' marks.) Then just make sure there is an even number of them
 			if quotationMark['start'] is quotationMark['end'] and numberOpenings % 2 is not 0:
 				# If sentence starts with this quotation mark, put the new one at the end
@@ -137,34 +160,33 @@ def fileToSentenceList(pathToTextFile):
 					assumedSentence['sentence'] += quotationMark['end']
 				else:
 					assumedSentence['sentence'] = quotationMark['end'] + assumedSentence['sentence']
-			elif numberOpenings > numberClosings:
-				assumedSentence['sentence'] += quotationMark['end']
-			elif numberOpenings < numberClosings:
-				 assumedSentence['sentence'] = quotationMark['start'] + assumedSentence['sentence']
-		
+			# Are the opening and closing marks NOT the same?
+			else:
+				# Are there more openings than closings? Add a mark to the end.
+				if numberOpenings > numberClosings:
+					assumedSentence['sentence'] += quotationMark['end']
+				# Are there more closings than openings? Add a mark to the beginning
+				elif numberOpenings < numberClosings:
+					 assumedSentence['sentence'] = quotationMark['start'] + assumedSentence['sentence']
+
 		# Make comprehensible what file the sentence was taken from
 		assumedSentence['file'] = pathToTextFile
 		# Overwrite the old sentence with the changes we just made
 		assumedSentences[index] = assumedSentence
-		# TODO: Avoid lost quotation marks (trailing at the end of a sentence)
-		
-		# Likewise, if assumedSentence ends with a quotation mark and does not start with one,
-		# add one at the start.
 
 	return assumedSentences
 
 # Iterate over all the text files in our text files directory
-assumedSentences = ['']
+assumedSentences = []
 for filename in os.listdir(textFilesDirectory):
 	print(filename + "…")
 	if os.path.isfile(textFilesDirectory + filename) and filename != ".DS_Store" and filename != ".gitkeep":
-		assumedSentences = fileToSentenceList(textFilesDirectory + filename)
+		assumedSentences.extend(fileToSentenceList(textFilesDirectory + filename))
 		print("👍")
 	else:
 		print("❌")
 
 # Connect to the database
-from pymongo import MongoClient
 client = MongoClient()
 db = client[sentencesDatabase]
 sentencesCollection = db[sentencesCollection]
@@ -190,5 +212,6 @@ print("\nSummary: There are now " + str(counter) + " sentences in the DB. On ave
 # Print a random entry
 randomInteger = random.randint(0, counter)
 print("Here's a random entry:")
-print(sentencesCollection.find().limit(-1).skip(randomInteger).next())
+print(sentencesCollection.find({}).limit(-1).skip(randomInteger).next())
+
 

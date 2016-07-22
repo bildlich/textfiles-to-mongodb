@@ -89,7 +89,14 @@ sentencesCollection.remove()
 # Write the sentences to the database
 for index, sentence in enumerate(sentencesFromAllFiles):
 	sentencesCollection.insert_one(sentence)
-		
+	
+# Build collection Index for numberOfWords, random
+print("Building index…")
+sentencesCollection.create_index([
+	("randomPoint", "2d"),
+	("numberOfWords", 1)
+])
+
 counter = 0
 numberOfWords = 0
 for sentence in sentencesCollection.find():

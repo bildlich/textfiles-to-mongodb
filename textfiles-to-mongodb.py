@@ -63,7 +63,8 @@ def fileToSentenceList(pathToTextFile):
 		sentences.append({
 			'sentence': sentence,
 			'numberOfWords': sentence.count(' ') + 1,
-			'file': pathToTextFile
+			'file': pathToTextFile,
+			'randomPoint': [random.random(), 0] # For efficient random entry retrieval. See http://stackoverflow.com/a/9499484/836005
 		})
 		
 	return sentences

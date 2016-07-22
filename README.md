@@ -10,6 +10,7 @@ A python script that **splits a bunch of english-language text files into senten
     }
 
 ![Terminal screenshot](screenshot.png?raw=true)
+
 The hardest part, the sentence tokenization, is done with the [nltk sentence tokenizer](http://www.nltk.org/). I had written a sentence tokenizer from scratch. Then I discovered nltk and threw my work out of the window because nltk is just too good.
 
 ## Text modifications
